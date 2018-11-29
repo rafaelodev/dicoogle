@@ -29,7 +29,7 @@
         </Raven>
     </Appenders>
     <Loggers>
-        <Root level="info">
+        <Root level="debug">
             <AppenderRef ref="STDOUT" />
             <AppenderRef ref="Rolling" />
             <AppenderRef ref="Sentry" level="error" />

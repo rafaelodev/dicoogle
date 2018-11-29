@@ -18,15 +18,43 @@
  */
 package pt.ua.dicoogle.plugins;
 
+import java.io.File;
+import java.io.IOException;
+import java.net.URI;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.zip.ZipFile;
+
+import javax.swing.JMenuItem;
+import javax.swing.JPanel;
+
 import org.apache.commons.configuration.ConfigurationException;
 import org.apache.commons.io.FileUtils;
 import org.restlet.resource.ServerResource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import pt.ua.dicoogle.core.ServerSettings;
 import pt.ua.dicoogle.plugins.webui.WebUIPlugin;
 import pt.ua.dicoogle.plugins.webui.WebUIPluginManager;
-import pt.ua.dicoogle.sdk.*;
+import pt.ua.dicoogle.sdk.DicooglePlugin;
+import pt.ua.dicoogle.sdk.GraphicalInterface;
+import pt.ua.dicoogle.sdk.IndexerInterface;
+import pt.ua.dicoogle.sdk.JettyPluginInterface;
+import pt.ua.dicoogle.sdk.PluginSet;
+import pt.ua.dicoogle.sdk.QueryInterface;
+import pt.ua.dicoogle.sdk.StorageInputStream;
+import pt.ua.dicoogle.sdk.StorageInterface;
 import pt.ua.dicoogle.sdk.Utils.TaskQueue;
 import pt.ua.dicoogle.sdk.Utils.TaskRequest;
 import pt.ua.dicoogle.sdk.core.PlatformCommunicatorInterface;
@@ -40,15 +68,6 @@ import pt.ua.dicoogle.server.PluginRestletApplication;
 import pt.ua.dicoogle.server.web.DicoogleWeb;
 import pt.ua.dicoogle.taskManager.RunningIndexTasks;
 import pt.ua.dicoogle.taskManager.TaskManager;
-
-import javax.swing.*;
-import java.io.File;
-import java.io.IOException;
-import java.net.URI;
-import java.util.*;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
-import java.util.zip.ZipFile;
 
 /**
  *

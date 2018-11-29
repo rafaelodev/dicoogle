@@ -18,15 +18,19 @@
  */
 package pt.ua.dicoogle.server;
 
-import pt.ua.dicoogle.core.ServerSettings;
-
-import java.awt.*;
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
-import java.util.*;
+import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
-import java.util.concurrent.*;
+import java.util.Set;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.PriorityBlockingQueue;
+import java.util.concurrent.TimeUnit;
 
 import org.dcm4che2.data.DicomObject;
 import org.dcm4che2.data.Tag;
@@ -35,14 +39,6 @@ import org.dcm4che2.net.Association;
 import org.dcm4che2.net.CommandUtils;
 import org.dcm4che2.net.Device;
 import org.dcm4che2.net.DicomServiceException;
-
-///import org.dcm4che2.net.Executor;
-/** dcm4che doesn't support Executor anymore, so now import from java.util */ 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import org.dcm4che2.net.NetworkApplicationEntity;
 import org.dcm4che2.net.NetworkConnection;
 import org.dcm4che2.net.NewThreadExecutor;
@@ -51,8 +47,9 @@ import org.dcm4che2.net.Status;
 import org.dcm4che2.net.TransferCapability;
 import org.dcm4che2.net.service.StorageService;
 import org.dcm4che2.net.service.VerificationService;
+import org.slf4j.LoggerFactory;
 
-
+import pt.ua.dicoogle.core.ServerSettings;
 import pt.ua.dicoogle.plugins.PluginController;
 import pt.ua.dicoogle.sdk.IndexerInterface;
 import pt.ua.dicoogle.sdk.StorageInterface;
@@ -298,7 +295,7 @@ public class RSIStorage extends StorageService
             URI uri = null;
             for (StorageInterface storage : plugins)
             {
-                uri = storage.store(d);
+				uri = storage.store(d, as.getCallingAET());
                 if(uri != null) {
                     // queue to index
                     ImageElement element = new ImageElement();
