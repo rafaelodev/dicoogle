@@ -19,15 +19,9 @@
 package pt.ua.dicoogle.server.web.servlets;
 
 import java.io.ByteArrayOutputStream;
-import java.io.PrintWriter;
-
-import javax.servlet.ServletException;
-import javax.servlet.http.HttpServlet;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.PrintWriter;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Arrays;
@@ -35,12 +29,17 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 
+import javax.servlet.ServletException;
 import javax.servlet.ServletOutputStream;
+import javax.servlet.http.HttpServlet;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 
-import net.sf.json.JSONObject;
 import org.apache.commons.io.IOUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import net.sf.json.JSONObject;
 import pt.ua.dicoogle.core.ServerSettings;
 import pt.ua.dicoogle.plugins.PluginController;
 import pt.ua.dicoogle.sdk.StorageInputStream;
@@ -103,66 +102,72 @@ public class ImageServlet extends HttpServlet
             frame = Integer.parseInt(sFrame);
         }
         
-        StorageInputStream imgFile;
-        if (sopInstanceUID != null) {
-            // get the image file for that SOP Instance UID
-            imgFile = getFileFromSOPInstanceUID(sopInstanceUID, providers);
-            // if no .dcm file was found tell the client
-            if (imgFile == null) {
-                response.sendError(404, "No image file for supplied SOP Instance UID!");
-                return;
-            }
-        } else {
-            try {
-                // get the image file by the URI
-                URI imgUri = new URI(uri);
-                StorageInterface storageInt = PluginController.getInstance().getStorageForSchema(imgUri);
-                Iterator<StorageInputStream> storages = storageInt.at(imgUri).iterator();
-                // take the first valid storage
-                if (!storages.hasNext()) {
-                    response.sendError(404, "No image file for supplied URI!");
-                    return;
-                }
-                imgFile = storages.next();
-                 
-            } catch (URISyntaxException ex) {
-                response.sendError(400, "Bad URI syntax");
-                return;
-            }
+        StorageInputStream imgFile = null;
+        try {
+	        if (sopInstanceUID != null) {
+	            // get the image file for that SOP Instance UID
+	            imgFile = getFileFromSOPInstanceUID(sopInstanceUID, providers);
+	            // if no .dcm file was found tell the client
+	            if (imgFile == null) {
+	                response.sendError(404, "No image file for supplied SOP Instance UID!");
+	                return;
+	            }
+	        } else {
+	            try {
+	                // get the image file by the URI
+	                URI imgUri = new URI(uri);
+	                StorageInterface storageInt = PluginController.getInstance().getStorageForSchema(imgUri);
+	                Iterator<StorageInputStream> storages = storageInt.at(imgUri).iterator();
+	                // take the first valid storage
+	                if (!storages.hasNext()) {
+	                    response.sendError(404, "No image file for supplied URI!");
+	                    return;
+	                }
+	                imgFile = storages.next();
+	                 
+	            } catch (URISyntaxException ex) {
+	                response.sendError(400, "Bad URI syntax");
+	                return;
+	            }
+	        }
+	
+			// if there is a cache available then use it
+			if (cache != null && cache.isRunning()) {
+	
+	            try {
+	                InputStream istream = cache.get(imgFile.getURI(), frame, thumbnail);
+	                response.setContentType("image/png");
+	                try(ServletOutputStream out = response.getOutputStream()) {
+	                    IOUtils.copy(istream, out);
+	                }
+	            } catch (IOException ex) {
+	                logger.warn("Could not convert the image", ex);
+	                response.sendError(500);
+	            } catch (RuntimeException ex) {
+	                logger.error("Unexpected exception", ex);
+	                response.sendError(500);
+	            }
+	            
+	 		} else {
+	            // if the cache is invalid or not running convert the image and return it "on-the-fly"
+	            try {
+	                ByteArrayOutputStream pngStream = getPNGStream(imgFile, frame, thumbnail);
+	                response.setContentType("image/png"); // set the appropriate type for the PNG image
+	                response.setContentLength(pngStream.size()); // set the image size
+	                try (ServletOutputStream out = response.getOutputStream()) {
+	                    pngStream.writeTo(out);
+	                    pngStream.flush();
+	                }
+	            } catch (IOException ex) {
+	                logger.warn("Could not convert the image", ex);
+	                response.sendError(500, "Could not convert the image");
+	            }
+			}
+        } finally {
+        	if (imgFile != null && imgFile.getInputStream() != null) {
+        		imgFile.getInputStream().close();
+        	}
         }
-
-		// if there is a cache available then use it
-		if (cache != null && cache.isRunning()) {
-
-            try {
-                InputStream istream = cache.get(imgFile.getURI(), frame, thumbnail);
-                response.setContentType("image/png");
-                try(ServletOutputStream out = response.getOutputStream()) {
-                    IOUtils.copy(istream, out);
-                }
-            } catch (IOException ex) {
-                logger.warn("Could not convert the image", ex);
-                response.sendError(500);
-            } catch (RuntimeException ex) {
-                logger.error("Unexpected exception", ex);
-                response.sendError(500);
-            }
-            
- 		} else {
-            // if the cache is invalid or not running convert the image and return it "on-the-fly"
-            try {
-                ByteArrayOutputStream pngStream = getPNGStream(imgFile, frame, thumbnail);
-                response.setContentType("image/png"); // set the appropriate type for the PNG image
-                response.setContentLength(pngStream.size()); // set the image size
-                try (ServletOutputStream out = response.getOutputStream()) {
-                    pngStream.writeTo(out);
-                    pngStream.flush();
-                }
-            } catch (IOException ex) {
-                logger.warn("Could not convert the image", ex);
-                response.sendError(500, "Could not convert the image");
-            }
-		}
     }
     
     private ByteArrayOutputStream getPNGStream(StorageInputStream imgFile, int frame, boolean thumbnail) throws IOException {
