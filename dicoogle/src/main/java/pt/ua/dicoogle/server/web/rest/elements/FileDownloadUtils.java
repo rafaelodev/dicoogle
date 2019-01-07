@@ -29,15 +29,14 @@ import java.io.OutputStream;
 import java.net.URI;
 import java.util.HashMap;
 import java.util.concurrent.ExecutionException;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.io.IOUtils;
 import org.restlet.data.Disposition;
 import org.restlet.data.MediaType;
 import org.restlet.representation.OutputRepresentation;
+import org.slf4j.LoggerFactory;
+
 import pt.ua.dicoogle.plugins.PluginController;
 import pt.ua.dicoogle.sdk.StorageInputStream;
 import pt.ua.dicoogle.sdk.datastructs.SearchResult;
@@ -127,6 +126,9 @@ public class FileDownloadUtils {
              } catch (IOException ex) {
                  LoggerFactory.getLogger(RestFileResource.class).error(ex.getMessage(), ex);
                  throw ex;
+             } finally {
+            	 // Free resources.
+            	 stream.getInputStream().close();
              }
            
         }
