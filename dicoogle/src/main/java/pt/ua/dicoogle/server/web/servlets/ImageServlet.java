@@ -133,9 +133,10 @@ public class ImageServlet extends HttpServlet
 	
 			// if there is a cache available then use it
 			if (cache != null && cache.isRunning()) {
-	
+				InputStream istream = null;
 	            try {
-	                InputStream istream = cache.get(imgFile.getURI(), frame, thumbnail);
+	                //InputStream istream = cache.get(imgFile.getURI(), frame, thumbnail);
+	            	istream = cache.get(imgFile.getURI(), frame, thumbnail);
 	                response.setContentType("image/png");
 	                try(ServletOutputStream out = response.getOutputStream()) {
 	                    IOUtils.copy(istream, out);
@@ -146,12 +147,17 @@ public class ImageServlet extends HttpServlet
 	            } catch (RuntimeException ex) {
 	                logger.error("Unexpected exception", ex);
 	                response.sendError(500);
+	            } finally {
+	            	if (istream != null) {
+	            		istream.close();
+	            	}
 	            }
 	            
 	 		} else {
 	            // if the cache is invalid or not running convert the image and return it "on-the-fly"
+	 			ByteArrayOutputStream pngStream = null;
 	            try {
-	                ByteArrayOutputStream pngStream = getPNGStream(imgFile, frame, thumbnail);
+	                pngStream = getPNGStream(imgFile, frame, thumbnail);
 	                response.setContentType("image/png"); // set the appropriate type for the PNG image
 	                response.setContentLength(pngStream.size()); // set the image size
 	                try (ServletOutputStream out = response.getOutputStream()) {
@@ -161,6 +167,11 @@ public class ImageServlet extends HttpServlet
 	            } catch (IOException ex) {
 	                logger.warn("Could not convert the image", ex);
 	                response.sendError(500, "Could not convert the image");
+	            }
+	            finally {
+	            	if (pngStream != null) {
+	            		pngStream.close();
+	            	}
 	            }
 			}
         } finally {
