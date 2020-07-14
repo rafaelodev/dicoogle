@@ -103,6 +103,7 @@ public class ImageServlet extends HttpServlet
         }
         
         StorageInputStream imgFile = null;
+        URI imgUri = null;
         try {
 	        if (sopInstanceUID != null) {
 	            // get the image file for that SOP Instance UID
@@ -115,15 +116,17 @@ public class ImageServlet extends HttpServlet
 	        } else {
 	            try {
 	                // get the image file by the URI
-	                URI imgUri = new URI(uri);
-	                StorageInterface storageInt = PluginController.getInstance().getStorageForSchema(imgUri);
-	                Iterator<StorageInputStream> storages = storageInt.at(imgUri).iterator();
-	                // take the first valid storage
-	                if (!storages.hasNext()) {
-	                    response.sendError(404, "No image file for supplied URI!");
-	                    return;
-	                }
-	                imgFile = storages.next();
+//	                URI imgUri = new URI(uri);
+//	                StorageInterface storageInt = PluginController.getInstance().getStorageForSchema(imgUri);
+//	                Iterator<StorageInputStream> storages = storageInt.at(imgUri).iterator();
+//	                // take the first valid storage
+//	                if (!storages.hasNext()) {
+//	                    response.sendError(404, "No image file for supplied URI!");
+//	                    return;
+//	                }
+//	                imgFile = storages.next();
+	            	// Solo se crea el uri, no se obtiene el valor del s3.
+	            	imgUri = new URI(uri);
 	                 
 	            } catch (URISyntaxException ex) {
 	                response.sendError(400, "Bad URI syntax");
@@ -135,8 +138,12 @@ public class ImageServlet extends HttpServlet
 			if (cache != null && cache.isRunning()) {
 				InputStream istream = null;
 	            try {
-	                //InputStream istream = cache.get(imgFile.getURI(), frame, thumbnail);
-	            	istream = cache.get(imgFile.getURI(), frame, thumbnail);
+	                // InputStream istream = cache.get(imgFile.getURI(), frame, thumbnail);
+	            	if (imgFile != null) {
+	            		istream = cache.get(imgFile.getURI(), frame, thumbnail);
+	            	} else {
+	            		istream = cache.get(imgUri, frame, thumbnail);
+	            	}
 	                response.setContentType("image/png");
 	                try(ServletOutputStream out = response.getOutputStream()) {
 	                    IOUtils.copy(istream, out);
@@ -157,6 +164,19 @@ public class ImageServlet extends HttpServlet
 	            // if the cache is invalid or not running convert the image and return it "on-the-fly"
 	 			ByteArrayOutputStream pngStream = null;
 	            try {
+	            	// Sino esta activa la cache se obtiene el archivo del storage
+	            	if (imgFile == null) {
+		            	// get the image file by the URI
+		                StorageInterface storageInt = PluginController.getInstance().getStorageForSchema(imgUri);
+		                Iterator<StorageInputStream> storages = storageInt.at(imgUri).iterator();
+		                // take the first valid storage
+		                if (!storages.hasNext()) {
+		                    response.sendError(404, "No image file for supplied URI!");
+		                    return;
+		                }
+		                imgFile = storages.next();
+	            	}
+	            	/////
 	                pngStream = getPNGStream(imgFile, frame, thumbnail);
 	                response.setContentType("image/png"); // set the appropriate type for the PNG image
 	                response.setContentLength(pngStream.size()); // set the image size
