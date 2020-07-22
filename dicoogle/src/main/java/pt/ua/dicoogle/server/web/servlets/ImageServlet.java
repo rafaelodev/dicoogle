@@ -198,8 +198,10 @@ public class ImageServlet extends HttpServlet
         	if (imgFile != null && imgFile.getInputStream() != null) {
         		imgFile.getInputStream().close();
         		// Se elimina el archivo del almacenamiento temporal
-        		StorageInterface storageInterface = PluginController.getInstance().getStorageForSchema(imgUri);
-        		storageInterface.remove(imgUri);
+        		if (imgUri != null) {
+        			StorageInterface storageInterface = PluginController.getInstance().getStorageForSchema(imgUri);
+        			storageInterface.remove(imgUri);
+        		}
         	}
         }
     }
